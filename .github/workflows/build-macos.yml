@@ -34,7 +34,7 @@ jobs:
         mv macos.iso.cdr macOS-BigSur.iso
 
     - name: Upload ISO artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: macOS-BigSur.iso
         path: macOS-BigSur.iso
