@@ -1,0 +1,40 @@
+name: Build macOS ISO
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-macos-iso:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: |
+        brew install dmg2img
+
+    - name: Download macOS Installer
+      run: |
+        curl -L "https://swcdn.apple.com/content/downloads/10/18/047-32248-A_Y7S9K47C9M/rqg3zuwb6dkofsdilmz22awvxtq2sxwr15/InstallAssistant.pkg" -o InstallAssistant.pkg
+
+    - name: Expand PKG
+      run: |
+        mkdir macos-installer
+        pkgutil --expand InstallAssistant.pkg macos-installer
+
+    - name: Build ISO
+      run: |
+        hdiutil create -o macos_tmp -size 16000m -layout SPUD -fs HFS+J
+        hdiutil attach macos_tmp.dmg -noverify -mountpoint /Volumes/macosISO
+        sudo macOS\ Installer.app/Contents/Resources/createinstallmedia --volume /Volumes/macosISO --nointeraction
+        hdiutil detach /Volumes/Install\ macOS*
+        hdiutil convert macos_tmp.dmg -format UDTO -o macos.iso
+        mv macos.iso.cdr macOS-BigSur.iso
+
+    - name: Upload ISO artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: macOS-BigSur.iso
+        path: macOS-BigSur.iso
