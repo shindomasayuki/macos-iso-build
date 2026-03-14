@@ -9,32 +9,28 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
-
-    - name: Install dependencies
-      run: |
-        brew install dmg2img
+      uses: actions/checkout@v4
 
     - name: Download macOS Installer
       run: |
-        curl -L "https://swcdn.apple.com/content/downloads/####/InstallAssistant.pkg" -o InstallAssistant.pkg
+        curl -L "https://swcdn.apple.com/content/downloads/10/18/047-32248-A_Y7S9K47C9M/rqg3zuwb6dkofsdilmz22awvxtq2sxwr15/InstallAssistant.pkg" -o InstallAssistant.pkg
 
-    - name: Expand PKG
+    - name: Install macOS Installer
       run: |
-        mkdir macos-installer
-        pkgutil --expand InstallAssistant.pkg macos-installer
+        sudo installer -pkg InstallAssistant.pkg -target /
 
-    - name: Build ISO
+    - name: Create ISO
       run: |
         hdiutil create -o macos_tmp -size 16000m -layout SPUD -fs HFS+J
-        hdiutil attach macos_tmp.dmg -noverify -mountpoint /Volumes/macosISO
-        sudo macOS\ Installer.app/Contents/Resources/createinstallmedia --volume /Volumes/macosISO --nointeraction
-        hdiutil detach /Volumes/Install\ macOS*
-        hdiutil convert macos_tmp.dmg -format UDTO -o macos.iso
-        mv macos.iso.cdr macOS-BigSur.iso
+        hdiutil attach macos_tmp.dmg -mountpoint /Volumes/install_build
+        sudo /Applications/Install\ macOS\ Big\ Sur.app/Contents/Resources/createinstallmedia \
+          --volume /Volumes/install_build --nointeraction
+        hdiutil detach "/Volumes/Install macOS Big Sur"
+        hdiutil convert macos_tmp.dmg -format UDTO -o macos
+        mv macos.cdr macOS-BigSur.iso
 
-    - name: Upload ISO artifact
-      uses: actions/upload-artifact@v3
+    - name: Upload ISO
+      uses: actions/upload-artifact@v4
       with:
-        name: macOS-BigSur.iso
+        name: macOS-BigSur
         path: macOS-BigSur.iso
