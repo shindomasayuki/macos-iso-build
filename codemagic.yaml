@@ -19,25 +19,25 @@ workflows:
 
       - name: Create ISO Image
         script: |
-          # 1. 空のディスクイメージ作成 (14GB程度で十分です)
+          # 1. 空のディスクイメージ作成
           hdiutil create -o macos_tmp -size 14000m -layout SPUD -fs HFS+J
           
-          # 2. マウント
-          hdiutil attach macos_tmp.dmg -mountpoint /Volumes/install_build
+          # 2. マウント (デバイス情報を取得しておく)
+          DISK_DEVICE=$(hdiutil attach macos_tmp.dmg -mountpoint /Volumes/install_build | grep /dev/disk | head -n 1 | awk '{print $1}')
           
           # 3. インストールメディアの作成
-          # パスはインストールされたアプリ名に合わせて調整してください
           sudo "/Applications/Install macOS Big Sur.app/Contents/Resources/createinstallmedia" --volume /Volumes/install_build --nointeraction
           
-          # 4. アンマウント
-          hdiutil detach "/Volumes/Install macOS Big Sur"
+          # 4. 少し待機してから強制アンマウント
+          # インストール完了直後はOSがインデックス作成などで掴むことが多いため
+          sleep 5
+          hdiutil detach /Volumes/Install\ macOS\ Big\ Sur -force || hdiutil detach $DISK_DEVICE -force
           
-          # 5. ISO形式（CDR）へ変換
+          # 5. ISO形式へ変換
           hdiutil convert macos_tmp.dmg -format UDTO -o macOS-BigSur.cdr
           
-          # 6. 拡張子をisoに変更し、中間ファイルを削除
+          # 6. 後処理
           mv macOS-BigSur.cdr macOS-BigSur.iso
           rm macos_tmp.dmg
-
     artifacts:
       - "*.iso"
