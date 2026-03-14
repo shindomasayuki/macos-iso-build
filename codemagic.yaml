@@ -1,0 +1,43 @@
+workflows:
+  build-macos-iso:
+    name: Build macOS Big Sur ISO
+    max_build_duration: 60 # タイムアウト防止（分）
+    instance_type: mac_mini_m1 # または mac_mini_intel
+    triggering:
+      events:
+        - push
+    scripts:
+      - name: Download macOS Installer
+        script: |
+          curl -L "https://swcdn.apple.com/content/downloads/10/18/047-32248-A_Y7S9K47C9M/rqg3zuwb6dkofsdilmz22awvxtq2sxwr15/InstallAssistant.pkg" -o InstallAssistant.pkg
+
+      - name: Install macOS Installer App
+        script: |
+          sudo installer -pkg InstallAssistant.pkg -target /
+          # インストール完了後、即座にpkgを削除して容量を確保
+          rm InstallAssistant.pkg
+
+      - name: Create ISO Image
+        script: |
+          # 1. 空のディスクイメージ作成 (14GB程度で十分です)
+          hdiutil create -o macos_tmp -size 14000m -layout SPUD -fs HFS+J
+          
+          # 2. マウント
+          hdiutil attach macos_tmp.dmg -mountpoint /Volumes/install_build
+          
+          # 3. インストールメディアの作成
+          # パスはインストールされたアプリ名に合わせて調整してください
+          sudo "/Applications/Install macOS Big Sur.app/Contents/Resources/createinstallmedia" --volume /Volumes/install_build --nointeraction
+          
+          # 4. アンマウント
+          hdiutil detach "/Volumes/Install macOS Big Sur"
+          
+          # 5. ISO形式（CDR）へ変換
+          hdiutil convert macos_tmp.dmg -format UDTO -o macOS-BigSur.cdr
+          
+          # 6. 拡張子をisoに変更し、中間ファイルを削除
+          mv macOS-BigSur.cdr macOS-BigSur.iso
+          rm macos_tmp.dmg
+
+    artifacts:
+      - "*.iso"
